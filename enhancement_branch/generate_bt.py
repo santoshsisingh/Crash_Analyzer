@@ -114,8 +114,8 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
     se_dp_pattern    = re.compile('se_dp\.\d+\.\d+\.core$')
     se_log_agent_pattern    = re.compile('SeLogExport\.\d+\.\d+\.core$')
     generic_core_pattern = re.compile('core\.\d+$')
-    get_symbol_from_generic_core_pattern = re.compile('(se_dp|se_agent|se_log_agent)')
-    oldest_core_pattern = re.compile('(se_dp|se_agent|se_log_agent|core)\.\d+\.(\d+)\.stack_trace')
+    get_symbol_from_generic_core_pattern = re.compile('(se_dp|se_agent|se_log_agent|se_hm)')
+    oldest_core_pattern = re.compile('(se_dp|se_agent|se_log_agent|core|se_hm)\.\d+\.(\d+)\.stack_trace')
     previous_version = current_version = ''
     
     
@@ -156,9 +156,12 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
 
                         if (jira_id and status != 'Resolved' or status != 'Closed'):
                             print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
-                            utils.add_jira_comment(jira_id, contents)
+                            if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                                utils.add_jira_comment(jira_id, contents)
+                                ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                ft.close()
                     else:
-                        print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (core_file)
+                        print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (stack_trace)
                     
 
         else:
@@ -172,7 +175,7 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
                  
                 for core_file in list_dir:
                     if se_agent_pattern.search(core_file):
-                        ctime = os.stat(path_to_core_archive_directory+d+'/'+core_file).st_ctime
+                        ctime = str(int(os.stat(path_to_core_archive_directory+d+'/'+core_file).st_ctime))
                         fp = open(path_to_core_archive_directory+d+'/'+core_file+'.'+ctime+'.stack_trace' , 'wt+')
                         print "==================================================================================\n"
                         print "==============================Generating BT for Core %s==========================\n" % core_file
@@ -193,29 +196,49 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
                                 print "==================================================================================\n"
 
                         stack_traces = [f for f in os.listdir(path_to_core_archive_directory+d) if f.endswith('stack_trace')]
+                        stack_traces = sorted(stack_traces, key = lambda x: oldest_core_pattern.search(x).group(2))
                         
                         if len(stack_traces):
-                            for stack_trace in stack_traces:
-                                function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_trace)
-                                if (function_list and signal):
-                                    crash_function, jira_id, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
-                                    if not jira_id:
-                                        print """No Matching Crash Signature found in the Database.
-                                                 Creating a New Jira Ticket with the Contents of Core File\n"""
-                                        jira_id, status =  utils.create_jira_ticket(crash_function,contents,version,build,func_list,signal,core_file_location,case_number)
-                                        print "\nJira Ticket %s for Crash %s with Crash Function %s is Successfully Created\n" % (jira_id, core_file, crash_function)
-                                        utils.display_results_of_new_jira_in_tabular_format(core_file, crash_function, jira_id, status)
-                                    else:
-                                        utils.display_results_in_tabular_format(core_file, crash_function, jira_id, status)
-                                    
+                            function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_traces[0])
+                            core_file = os.path.basename(path_to_core_archive_directory+d+'/'+stack_traces[0])
+                            
+                            
+                            if (function_list and signal):
+                                crash_function, jira_id, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
+                                if not jira_id:
+                                    print """No Matching Crash Signature found in the Database.
+                                             Creating a New Jira Ticket with the Contents of Core File\n"""
+                                    jira_id, status =  utils.create_jira_ticket(crash_function,contents,version,build,func_list,signal,core_file_location,case_number)
+                                    print "\nJira Ticket %s for Crash %s with Crash Function %s is Successfully Created\n" % (jira_id, core_file, crash_function)
+                                    utils.display_results_of_new_jira_in_tabular_format(core_file, crash_function, jira_id, status)
+
                                 else:
-                                    print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (core_file)
+                                    utils.display_results_in_tabular_format(core_file, crash_function, jira_id, status)
+
+                            else:
+                                print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (core_file)
+
+                            if len(stack_traces[1:]):
+                                for stack_trace in stack_traces[1:]:
+                                    function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_trace)
+                                    if (function_list and signal):
+                                        crash_function, _, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
+
+                                        if (jira_id and status != 'Resolved' or status != 'Closed'):
+                                            print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
+                                            if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                                                utils.add_jira_comment(jira_id, contents)
+                                                ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                                ft.close()
+                                    else:
+                                        print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (stack_trace)
+                        
 
                         fp.close()
 
 
                     elif se_dp_pattern.search(core_file):
-                        ctime = os.stat(path_to_core_archive_directory+d+'/'+core_file).st_ctime
+                        ctime = str(int(os.stat(path_to_core_archive_directory+d+'/'+core_file).st_ctime))
                         fp = open(path_to_core_archive_directory+d+'/'+core_file+'.'+ctime+'.stack_trace' , 'wt+')
                         print "==================================================================================\n"
                         print "==============================Generating BT for Core %s==========================\n" % core_file
@@ -236,29 +259,49 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
                                 print "==================================================================================\n"
 
                         stack_traces = [f for f in os.listdir(path_to_core_archive_directory+d) if f.endswith('stack_trace')]
+                        stack_traces = sorted(stack_traces, key = lambda x: oldest_core_pattern.search(x).group(2))
                         
                         if len(stack_traces):
-                            for stack_trace in stack_traces:
-                                function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_trace)
-                                if (function_list and signal):
-                                    crash_function, jira_id, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
-                                    if not jira_id:
-                                        print """No Matching Crash Signature found in the Database.
-                                                 Creating a New Jira Ticket with the Contents of Core File\n"""
-                                        jira_id, status =  utils.create_jira_ticket(crash_function,contents,version,build,func_list,signal,core_file_location,case_number)
-                                        print "\nJira Ticket %s for Crash %s with Crash Function %s is Successfully Created\n" % (jira_id, core_file, crash_function)
-                                        utils.display_results_of_new_jira_in_tabular_format(core_file, crash_function, jira_id, status)
-                                    else:
-                                        utils.display_results_in_tabular_format(core_file, crash_function, jira_id, status)
+                            function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_traces[0])
+                            core_file = os.path.basename(path_to_core_archive_directory+d+'/'+stack_traces[0])
+                            
+                            
+                            if (function_list and signal):
+                                crash_function, jira_id, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
+                                if not jira_id:
+                                    print """No Matching Crash Signature found in the Database.
+                                             Creating a New Jira Ticket with the Contents of Core File\n"""
+                                    jira_id, status =  utils.create_jira_ticket(crash_function,contents,version,build,func_list,signal,core_file_location,case_number)
+                                    print "\nJira Ticket %s for Crash %s with Crash Function %s is Successfully Created\n" % (jira_id, core_file, crash_function)
+                                    utils.display_results_of_new_jira_in_tabular_format(core_file, crash_function, jira_id, status)
 
                                 else:
-                                    print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (core_file)
+                                    utils.display_results_in_tabular_format(core_file, crash_function, jira_id, status)
+
+                            else:
+                                print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (core_file)
+
+                            if len(stack_traces[1:]):
+                                for stack_trace in stack_traces[1:]:
+                                    function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_trace)
+                                    if (function_list and signal):
+                                        crash_function, _, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
+
+                                        if (jira_id and status != 'Resolved' or status != 'Closed'):
+                                            print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
+                                            if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                                                utils.add_jira_comment(jira_id, contents)
+                                                ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                                ft.close()
+                                    else:
+                                        print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (stack_trace)
+                        
 
                         fp.close()
 
 
                     elif se_log_agent_pattern.search(core_file):
-                        ctime = os.stat(path_to_core_archive_directory+d+'/'+core_file).st_ctime
+                        ctime = str(int(os.stat(path_to_core_archive_directory+d+'/'+core_file).st_ctime))
                         fp = open(path_to_core_archive_directory+d+'/'+core_file+'.'+ctime+'.stack_trace' , 'wt+')
                         print "==================================================================================\n"
                         print "==============================Generating BT for Core %s==========================\n" % core_file
@@ -280,25 +323,45 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
 
 
                         stack_traces = [f for f in os.listdir(path_to_core_archive_directory+d) if f.endswith('stack_trace')]
+                        stack_traces = sorted(stack_traces, key = lambda x: oldest_core_pattern.search(x).group(2))
                         
                         if len(stack_traces):
-                            for stack_trace in stack_traces:
-                                function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_trace)
-                                if (function_list and signal):
-                                    crash_function, jira_id, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
-                                    if not jira_id:
-                                        print """No Matching Crash Signature found in the Database.
-                                                 Creating a New Jira Ticket with the Contents of Core File\n"""
-                                        jira_id, status =  utils.create_jira_ticket(crash_function,contents,version,build,func_list,signal,core_file_location,case_number)
-                                        print "\nJira Ticket %s for Crash %s with Crash Function %s is Successfully Created\n" % (jira_id, core_file, crash_function)
-                                        utils.display_results_of_new_jira_in_tabular_format(core_file, crash_function, jira_id, status)
-                                    else:
-                                        utils.display_results_in_tabular_format(core_file, crash_function, jira_id, status)
-                        
-                                else:
-                                    print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (core_file)
+                            function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_traces[0])
+                            core_file = os.path.basename(path_to_core_archive_directory+d+'/'+stack_traces[0])
                             
-                            fp.close()
+                            
+                            if (function_list and signal):
+                                crash_function, jira_id, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
+                                if not jira_id:
+                                    print """No Matching Crash Signature found in the Database.
+                                             Creating a New Jira Ticket with the Contents of Core File\n"""
+                                    jira_id, status =  utils.create_jira_ticket(crash_function,contents,version,build,func_list,signal,core_file_location,case_number)
+                                    print "\nJira Ticket %s for Crash %s with Crash Function %s is Successfully Created\n" % (jira_id, core_file, crash_function)
+                                    utils.display_results_of_new_jira_in_tabular_format(core_file, crash_function, jira_id, status)
+
+                                else:
+                                    utils.display_results_in_tabular_format(core_file, crash_function, jira_id, status)
+
+                            else:
+                                print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (core_file)
+
+                            if len(stack_traces[1:]):
+                                for stack_trace in stack_traces[1:]:
+                                    function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_trace)
+                                    if (function_list and signal):
+                                        crash_function, _, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
+
+                                        if (jira_id and status != 'Resolved' or status != 'Closed'):
+                                            print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
+                                            if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                                                utils.add_jira_comment(jira_id, contents)
+                                                ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                                ft.close()
+                                    else:
+                                        print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (stack_trace)
+                
+                            
+                        fp.close()
 
 
                     elif generic_core_pattern.search(core_file):
@@ -359,7 +422,10 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
 
                                             if (jira_id and status != 'Resolved' or status != 'Closed'):
                                                 print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
-                                                utils.add_jira_comment(jira_id, contents)
+                                                if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                                                    utils.add_jira_comment(jira_id, contents)
+                                                    ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                                    ft.close()
                                         else:
                                             print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (core_file)
                             fp.close()
@@ -371,15 +437,13 @@ def main():
         usuage()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--path_to_core_dir", help ="Path to the Core Archive Directory")
-    parser.add_argument("-c", "--case_num", help ="Salesforce Case Number")
+    parser.add_argument("-p", "--path_to_core_dir",required = True, help = usuage())
+    parser.add_argument("-c", "--case_num", help = usuage())
 
     args = parser.parse_args()
 
-    if not args.case_num:
-        usuage()
-    
-    case_number = args.case_num
+    if  args.case_num:
+        case_number = args.case_num
 
     if args.path_to_core_dir:
         path_to_core_archive_directory = args.path_to_core_dir
