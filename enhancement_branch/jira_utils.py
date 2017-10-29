@@ -59,17 +59,3 @@ def search_issue(jira_id):
         status = issue.raw['fields']['status']['name']
 
     return status
-
-
-def add_jira_comments(jira_ticket, contents):
-
-    jira = jira_connect()
-    print "The Jira Ticket is %s\n" % (jira_ticket)
-    print "The Contents are %s\n" % (contents)
-
-    if jira:
-        try:
-            jira.add_comment(jira_ticket, contents)
-        except:
-            print "unable to add Jira Comments"
-
