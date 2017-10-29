@@ -38,25 +38,42 @@ def untar_core_directories(path_to_core_archive_directory):
     os.chdir(path_to_core_archive_directory)
     ls_dir = os.listdir(path_to_core_archive_directory)
     core_archive_untarred_directory_pattern = re.compile('core_archive_bundle\.(\d+_\d+_\d+)')
+    core_archive_untarred_directory_hm_pattern = re.compile('core_archive_bundle_hm\.(\d+_\d+_\d+)')
     core_archive_tarred_directory_pattern = re.compile('^\d+_\d+_\d+')
 
     core_file_bundle_to_untar = [f for f in ls_dir if core_archive_untarred_directory_pattern.search(f)]
+    core_file_bundle_to_untar.extend([f for f in ls_dir if core_archive_untarred_directory_hm_pattern.search(f)])
     core_directories_already_untarred = [f for f in ls_dir if core_archive_tarred_directory_pattern.search(f)]
+    
 
     
     print "==================================================================================\n"
     print "====================Untarring the Core Archive Directories========================\n"
     
     for f in core_file_bundle_to_untar:
-        if core_archive_untarred_directory_pattern.search(f).group(1) not in core_directories_already_untarred:
-            core_directories_already_untarred.append(core_archive_untarred_directory_pattern.search(f).group(1))
-	    print "Trying to untar the file %s" %f	
-            try:
-                subprocess.check_call(['tar','-xzf',path_to_core_archive_directory+f])
-                print "Untarred the file %s successfully" %f
-            except subprocess.CalledProcessError as e:
-                 print "unable to untar the directory since %s" %str(e)
-                 pass
+        if core_archive_untarred_directory_pattern.search(f):
+            if core_archive_untarred_directory_pattern.search(f).group(1) not in core_directories_already_untarred:
+                print "Trying to untar the file %s" %f
+                try:
+                    subprocess.check_call(['tar','-xzf',path_to_core_archive_directory+f])
+                    print "Untarred the file %s successfully" %f
+                    core_directories_already_untarred.append(core_archive_untarred_directory_pattern.search(f).group(1))
+                except subprocess.CalledProcessError as e:
+                    print "unable to untar the directory since %s" %str(e)
+                    pass
+                
+        elif core_archive_untarred_directory_hm_pattern.search(f): 
+            if core_archive_untarred_directory_hm_pattern.search(f).group(1) not in core_directories_already_untarred:
+                print "Trying to untar the file %s" %f
+                try:
+                    subprocess.check_call(['tar','-xzf',path_to_core_archive_directory+f])
+                    print "Untarred the file %s successfully" %f
+                    core_directories_already_untarred.append(core_archive_untarred_directory_hm_pattern.search(f).group(1))
+                except subprocess.CalledProcessError as e:
+                    print "unable to untar the directory since %s" %str(e)
+                    pass
+                
+       
 
     print "==================================================================================\n"
     print "===================Core Archive Directories Untarred Successfully=================\n"
@@ -156,9 +173,9 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
 
                         if (jira_id and status != 'Resolved' or status != 'Closed'):
                             print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
-                            if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                            if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
                                 utils.add_jira_comment(jira_id, contents)
-                                ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                 ft.close()
                     else:
                         print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (stack_trace)
@@ -226,9 +243,9 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
 
                                         if (jira_id and status != 'Resolved' or status != 'Closed'):
                                             print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
-                                            if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                                            if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
                                                 utils.add_jira_comment(jira_id, contents)
-                                                ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                                ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                                 ft.close()
                                     else:
                                         print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (stack_trace)
@@ -289,9 +306,9 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
 
                                         if (jira_id and status != 'Resolved' or status != 'Closed'):
                                             print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
-                                            if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                                            if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
                                                 utils.add_jira_comment(jira_id, contents)
-                                                ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                                ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                                 ft.close()
                                     else:
                                         print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (stack_trace)
@@ -353,9 +370,9 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
 
                                         if (jira_id and status != 'Resolved' or status != 'Closed'):
                                             print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
-                                            if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                                            if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
                                                 utils.add_jira_comment(jira_id, contents)
-                                                ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                                ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                                 ft.close()
                                     else:
                                         print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (stack_trace)
@@ -422,9 +439,9 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
 
                                             if (jira_id and status != 'Resolved' or status != 'Closed'):
                                                 print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
-                                                if not os.path.exists(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace):
+                                                if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
                                                     utils.add_jira_comment(jira_id, contents)
-                                                    ft = open(path_to_core_archive_directory+d+'/'+'jira_comment_added_'+stack_trace, 'w')
+                                                    ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                                     ft.close()
                                         else:
                                             print "The Core File: %s is Corrupted, Please perform manual analysis on the Core\n" % (core_file)
