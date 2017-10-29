@@ -54,8 +54,22 @@ def search_issue(jira_id):
             issue = jira.search_issues('key=%s'% (jira_id))[0]
         except:
             print "Unable to Search issues with the Jira ID"
+            pass
 
     if issue:
         status = issue.raw['fields']['status']['name']
 
     return status
+
+
+def add_jira_comments(jira_ticket, contents):
+
+    jira = jira_connect()
+    
+    if jira:
+        try:
+            jira.add_comment(jira_ticket, contents)
+        except:
+            print "unable to add Jira Comments"
+            pass
+
