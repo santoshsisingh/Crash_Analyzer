@@ -135,6 +135,10 @@ def untar_core_directories(path_to_core_archive_directory):
                            </header>"""
     print html_data
     sys.stdout.flush()
+    if not core_file_bundle_to_untar:
+        print "<p>There are no Core Archive Directories under the path %s</p>" %(path_to_core_archive_directory)
+        sys.stdout.flush()
+        exit(0)
     print "<p>Untarring the Core Archive Directories</p>"
     sys.stdout.flush()
     for f in core_file_bundle_to_untar:
@@ -269,13 +273,12 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
                 for stack_trace in stack_traces[1:]:
                     function_list, signal, contents = utils.get_function_list_signal_from_stack_trace(path_to_core_archive_directory+d+'/'+stack_trace)
                     if (function_list and signal):
-                        crash_function, _, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
+                        crash_function, jira_id, status, func_list = utils.check_for_duplicates_in_db(function_list, signal)
 
                         if (jira_id and status != 'Resolved' or status != 'Closed'):
-                            print "<p>Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket</p>"
-                            sys.stdout.flush()
                             if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
-                                utils.add_jira_comment(jira_id, contents)
+                                print "<p>Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket</p>"
+                                utils.add_jira_comment(jira_id, contents,core_file_location)
                                 ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                 ft.close()
                     else:
@@ -350,7 +353,7 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
                                             print "<p>Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket</p>"
                                             sys.stdout.flush()
                                             if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
-                                                utils.add_jira_comment(jira_id, contents)
+                                                utils.add_jira_comment(jira_id, contents,core_file_location)
                                                 ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                                 ft.close()
                                     else:
@@ -418,7 +421,7 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
                                             print "<p>Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket</p>"
                                             sys.stdout.flush()
                                             if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
-                                                utils.add_jira_comment(jira_id, contents)
+                                                utils.add_jira_comment(jira_id, contents,core_file_location)
                                                 ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                                 ft.close()
                                     else:
@@ -483,7 +486,7 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
                                         if (jira_id and status != 'Resolved' or status != 'Closed'):
                                             print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
                                             if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
-                                                utils.add_jira_comment(jira_id, contents)
+                                                utils.add_jira_comment(jira_id, contents,core_file_location)
                                                 ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                                 ft.close()
                                     else:
@@ -552,7 +555,7 @@ def generate_bt_with_core_and_symbol_files(core_directories_after_untar, path_to
                                             if (jira_id and status != 'Resolved' or status != 'Closed'):
                                                 print "Found Additional Core Files in the Same Core Archive Directory, Adding the Stack Traces as Comments in the Parent Jira Ticket\n"
                                                 if not os.path.exists(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added'):
-                                                    utils.add_jira_comment(jira_id, contents)
+                                                    utils.add_jira_comment(jira_id, contents,core_file_location)
                                                     ft = open(path_to_core_archive_directory+d+'/'+stack_trace+'_jira_comment_added', 'w')
                                                     ft.close()
                                         else:

@@ -218,8 +218,8 @@ def create_jira_ticket(crash_function, contents, version, build,function_list,si
     return (jira_ticket, status)
 
 
-def add_jira_comment(jira_ticket, contents):
-    jira_utils.add_jira_comments(jira_ticket, contents)
+def add_jira_comment(jira_ticket, contents,core_file_location):
+    jira_utils.add_jira_comments(jira_ticket, contents,core_file_location)
     
 
 def display_results_in_tabular_format(core_file, crash_function, jira_ticket, status):
@@ -243,9 +243,14 @@ def display_results_in_tabular_format(core_file, crash_function, jira_ticket, st
                       display: table-caption;
                           text-align: center;
               }
+              a:hover {
+                      color: blue;
+                          background-color: transparent;
+                              text-decoration: none;
+              }
               </style>
               </head>
-              <header class="w3-container" style="padding:30px;background-color:rgb(255, 255, 0);color:black">
+              <header class="w3-container" style="padding:30px;background-color:rgb(255, 255, 255);color:black">
               <body>
               <div>
               <table style="width:100%">
@@ -260,7 +265,7 @@ def display_results_in_tabular_format(core_file, crash_function, jira_ticket, st
     print "<tr>"
     print "<td>"+core_file+"</td>"
     print "<td>"+crash_function+"</td>"
-    print "<td>"+jira_ticket+"</td>"
+    print "<td><a href=https://avinetworks.atlassian.net/browse/"+jira_ticket+" target=_blank"+">"+jira_ticket+"</a></td>"
     print "<td>"+status+"</td>"
     print "</tr>" 
     print "</table>"
@@ -294,7 +299,7 @@ def display_results_of_new_jira_in_tabular_format(core_file, crash_function, jir
               }
               </style>
               </head>
-              <header class="w3-container" style="padding:30px;background-color:rgb(255, 255, 0);color:black">
+              <header class="w3-container" style="padding:30px;background-color:rgb(255, 255, 255);color:black">
               <body>
               <div>
               <table style="width:100%">
@@ -309,7 +314,7 @@ def display_results_of_new_jira_in_tabular_format(core_file, crash_function, jir
     print "<tr>"
     print "<td>"+core_file+"</td>"
     print "<td>"+crash_function+"</td>"
-    print "<td>"+jira_ticket+"</td>"
+    print "<td><a href=https://avinetworks.atlassian.net/browse/"+jira_ticket+" target=_blank"+">"+jira_ticket+"</a></td>"
     print "<td>"+status+"</td>"
     print "</tr>" 
     print "</table>"

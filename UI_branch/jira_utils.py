@@ -2,6 +2,7 @@
 
 from jira.client import JIRA
 import sys
+import traceback
 
 ACCESS_TOKEN = 'IXWGWN1wmcKcpdNwa2GI8n4E6BdKnwl1'
 ACCESS_TOKEN_SECRET = 'tHRK2crHo9rAiEJ9HjDnjCKNjqw6Qw1L'
@@ -26,20 +27,22 @@ def create_issue(summary, description, components, versions, issuetype,core_file
 
     if jira:
        try: 
-           issue = jira.create_issue(project = project_name,
+           issue = jira.create_issue(project= project_name,
                                      summary = summary,
                                      description = description,
                                      issuetype = {'name': issuetype},
                                      components = [{'name': components}],
-                                     versions = [{'name': versions}])
+                                     versions = [{'name': versions}],
+                                     customfield_12424={'value':'Customer Bug'})
 
        except:
-            print "<p>Unable to create Jira Ticket</p>"
+            print traceback.print_exc()
+            print "<p>Unable to create Jira Ticket since </p>" 
             exit(0)
 
 
     if issue:
-        issue.update(fields={'customfield_10202':{'value':'Yes'}, 'customfield_10400': case_number, 'labels': ['Crash'], 'customfield_10030':{'value':'Severity 1'}, 'priority':{'name':'High'}})
+        issue.update(fields={'customfield_10400': case_number, 'labels': ['Crash'], 'customfield_10030':{'value':'Severity 1'}, 'priority':{'name':'High'}})
         jira.add_comment(issue, core_file_location)
         return issue
 
@@ -64,13 +67,14 @@ def search_issue(jira_id):
     return status
 
 
-def add_jira_comments(jira_ticket, contents):
+def add_jira_comments(jira_ticket, contents,core_file_location):
 
     jira = jira_connect()
     
     if jira:
         try:
             jira.add_comment(jira_ticket, contents)
+            jira.add_comment(jira_ticket, core_file_location)
         except:
             print "<p>unable to add Jira Comments</p>"
             pass
